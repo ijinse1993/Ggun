@@ -72,19 +72,6 @@ void loop(void)
   // - VECTOR_GRAVITY       - m/s^2
   //imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
 
-  /* Display the floating point data */
-  /*
-  Serial.print("X: ");
-  Serial.print(euler.x());
-  Serial.print(" Y: ");
-  Serial.print(euler.y());
-  Serial.print(" Z: ");
-  Serial.print(euler.z());
-  Serial.print("\t\t");
-  */
-  // 오일러 각에 대한 정보 사용 안함
-
-
   // Quaternion data
   imu::Quaternion quat = bno.getQuat();
   // 쿼터니언 정보를 회전행렬로 변환해서 사용할 예정입니다.
@@ -92,32 +79,25 @@ void loop(void)
   /* Display calibration status for each sensor. */
   uint8_t system, gyro, accel, mag = 0;
   bno.getCalibration(&system, &gyro, &accel, &mag);
-  /*
-  Serial.print("CALIBRATION: Sys=");
-  Serial.print(system, DEC);
-  Serial.print(" Gyro=");
-  Serial.print(gyro, DEC);
-  Serial.print(" Accel=");
-  Serial.print(accel, DEC);
-  Serial.print(" Mag=");
-  Serial.println(mag, DEC);
-  */
 
   // 회전 행렬을 구하기 위한 정보들
   float x2 = quat.x() * quat.x();
   float y2 = quat.y() * quat.y();
   float z2 = quat.z() * quat.z();
 
-  float wx = -quat.w() * quat.x();
-  float wy = -quat.w() * quat.y();
-  float wz = -quat.w() * quat.z();
+  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //쿼터니온에 대해 알지못하지만 방송에서 대각선움직임이 정상동작 안한다고 하여 검색해보니 인터넷에서는 w에 -가 없는것 같아 혹시 몰라 수정. 테스트 필요
+  //https://enghqii.tistory.com/63
+  float wx = quat.w() * quat.x();  //-quat.w() * quat.x();
+  float wy = quat.w() * quat.y();  //-quat.w() * quat.y();
+  float wz = quat.w() * quat.z();  //-quat.w() * quat.z();
   float xy = quat.x() * quat.y();
   float xz = quat.x() * quat.z();
   float yz = quat.y() * quat.z();
 
   // 회전 행렬, 열기반 벡터를 사용할 것
   float matrix[3][3] = {
-      {1.f - 2 * (y2 + z2), 2 * (xy - wz), 2 * (xz + wy)},
+      {0, 0, 0},  //{1.f - 2 * (y2 + z2), 2 * (xy - wz), 2 * (xz + wy)},
       {2 * (xy + wz), 1.f - 2 * (x2 + z2), 2 * (yz - wz)},
       {2 * (xz - wy), 2 * (yz + wx), 1.f - 2 * (x2 + y2)}
   };
@@ -129,34 +109,29 @@ void loop(void)
   float accZ = acc.z();
 
   // 좌표계가 변환된 가속도 얻어오는 부분, 이 부분이 진짜로 원하는 데이터 일 겁니다.
-  float newAccX = accX * matrix[0][0] + accY * matrix[0][1] + accZ * matrix[0][2];
+  //float newAccX = accX * matrix[0][0] + accY * matrix[0][1] + accZ * matrix[0][2];
   float newAccY = accX * matrix[1][0] + accY * matrix[1][1] + accZ * matrix[1][2];
   float newAccZ = accX * matrix[2][0] + accY * matrix[2][1] + accZ * matrix[2][2];
 
-//  // 가속도 테스트용 출력 부분
-//  Serial.print("newAccX:");
-//  Serial.print(accX);
-//  Serial.print(" newAccY:");
-//  Serial.print(accY);
-//  Serial.print(" newAccZ:");
-//  Serial.print(accZ);
-
   // 변환된 가속도 테스트용 출력 부분
-  Serial.print("newAccX:");
-  Serial.print(newAccX);
-  Serial.print(" newAccY:");
-  Serial.print(newAccY);
-  Serial.print(" newAccZ:");
-  Serial.println(newAccZ);
+  //Serial.print("newAccX:");
+  //Serial.print(newAccX);
+  //Serial.print(" newAccY:");
+  //Serial.print(newAccY);
+  //Serial.print(" newAccZ:");
+  //Serial.println(newAccZ);
 
-float mouseX;
-float mouseY;
+  // 0.5보다 절대값이 작으면 0으로 변경
+  if( fabs(newAccX) < 0.5 )
+  {
+    newAccX = 0;
+  }
+  if( fabs(newAccY) < 0.5 )
+  {
+    newAccX = 0;
+  }
 
-    mouseX += newAccY;
-
-    mouseY += newAccZ;
-
-Mouse.move(newAccY*-50, newAccZ*50, 0);  
+  Mouse.move(newAccY*-50, newAccZ*50, 0);  
 
   delay(BNO055_SAMPLERATE_DELAY_MS);
 }
